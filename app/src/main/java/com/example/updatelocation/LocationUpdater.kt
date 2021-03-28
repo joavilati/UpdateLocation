@@ -1,12 +1,15 @@
 package com.example.updatelocation
 
 import android.annotation.SuppressLint
-import android.app.Service
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.IBinder
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
@@ -15,13 +18,12 @@ import com.google.android.gms.location.GeofencingEvent
 
 private const val TAG = "LocationUpdater"
 
-class LocationUpdater :  LifecycleService(){
+class LocationUpdater :  LifecycleService() {
+
 
     companion object {
         private const val NOTIFICATION_TITLE = "Location Updater"
         private const val RADIUS: Float = 180F
-        private var count = 0
-        private var geoAlreadyInitialized = false
         private const val TRACKING_CHANNEL = "tracking_channel"
         private const val TRACKING_NOTIFICATION_ID = 1
         private val exitFromGeofence = MutableLiveData(false)
@@ -69,5 +71,48 @@ class LocationUpdater :  LifecycleService(){
             }
         }
     }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        createNotificationChannel()
+        startNotificationService()
+        return START_NOT_STICKY
+    }
+
+    private fun startNotificationService(){
+        val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            notificationIntent,
+            0
+        )
+
+        val notification = NotificationCompat.Builder(this, TRACKING_CHANNEL)
+            .setChannelId(TRACKING_CHANNEL)
+            .setContentTitle(NOTIFICATION_TITLE)
+            .setSmallIcon(R.drawable.ic_baseline_person_pin_circle_24)
+            .setPriority(NotificationManager.IMPORTANCE_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        startForeground(TRACKING_NOTIFICATION_ID, notification)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel = NotificationChannel(
+                TRACKING_CHANNEL,
+                "Foreground Location Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            assert(manager != null)
+            manager.createNotificationChannel(notificationChannel)
+        }
+    }
+
+
+
 
 }
